@@ -1,6 +1,7 @@
 #include <iostream>
 #include <iomanip>
 #include <limits>
+#include <string>
 
 #include "leibnitz_pi.h"
 

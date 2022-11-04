@@ -1,5 +1,6 @@
 #include <vector>
-#include <future>
+#include <thread>
+#include <numeric>
 
 #include "leibnitz_pi.h"
 
@@ -15,24 +16,27 @@ double leibnitzSum(int startTerm, int nTerms)
     return sum;
 }
 
-double leibnitzPiMT(int nTerms, int nTreads)
+double leibnitzPiMT(int nTerms, int nThreads)
 {
-    if (nTreads > nTerms)
-        nTreads = nTerms;
-    std::vector<std::future<double>> futures;
-    int portion = nTerms / nTreads;
-    for(int start = 0; start < nTerms; start += portion)
+    if (nThreads > nTerms)
+        nThreads = nTerms;
+    auto task = [](int start, int terms, double* out)
     {
-        futures.push_back(std::async([start, portion] {
-            return leibnitzSum(start, portion);
-        }));
+        *out = leibnitzSum(start, terms); 
+    };
+
+    std::vector<std::thread> threads;
+    std::vector<double> sums(nThreads, 0.0);
+    int portion = nTerms / nThreads;
+    for(int batch = 0; batch < nThreads; ++batch)
+    {
+        threads.push_back(std::thread(task, batch * portion, portion, &sums[batch]));
     }
 
-    double sum = 0.0;
-    for(auto& f: futures)
-        sum += f.get();
+    for(auto& t: threads)
+        t.join();
     
-    return sum * 4;
+    return std::accumulate(sums.begin(), sums.end(), 0.0) * 4;
 }
 
 double leibnitzPiST(int nTerms)
