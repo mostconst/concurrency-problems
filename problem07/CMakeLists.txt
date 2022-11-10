@@ -1,9 +1,12 @@
-cmake_minimum_required(VERSION 3.14)
+cmake_minimum_required(VERSION 3.15)
 
 set(PATCH_VERSION "1" CACHE INTERNAL "Patch version")
 set(PROJECT_VESRION 0.0.${PATCH_VERSION})
 
 project(parallel-cp VERSION ${PROJECT_VESRION})
+
+set(CMAKE_CXX_STANDARD 20)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 set(CMAKE_THREAD_PREFER_PTHREAD TRUE)
 set(THREADS_PREFER_PTHREAD_FLAG TRUE)
@@ -17,11 +20,6 @@ set(TEST_NAME "${CMAKE_PROJECT_NAME}_test")
 
 add_executable(${EXEC_NAME} main.cpp)
 add_library(${LIB_NAME} "parallel-cp.cpp")
-
-set_target_properties(${EXEC_NAME} ${LIB_NAME} PROPERTIES
-    CXX_STANDARD 17
-    CXX_STANDARD_REQUIRED ON
-)
 
 target_link_libraries(${EXEC_NAME} PRIVATE
     ${LIB_NAME}
@@ -40,11 +38,6 @@ if(WITH_GTEST)
     FetchContent_MakeAvailable(googletest)
 
     add_executable(${TEST_NAME} "test_parallel-cp.cpp")
-
-    set_target_properties(${TEST_NAME} PROPERTIES
-        CXX_STANDARD 17
-        CXX_STANDARD_REQUIRED ON
-    )
 
     target_link_libraries(${TEST_NAME}
         GTest::gtest_main

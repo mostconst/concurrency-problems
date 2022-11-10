@@ -4,6 +4,6 @@
 
 int main()
 {
-	std::cout << getAnswer() << std::endl;
+	std::cout << "not done" << std::endl;
 	return 0;
 }
