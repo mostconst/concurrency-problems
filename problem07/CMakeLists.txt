@@ -12,7 +12,7 @@ set(CMAKE_THREAD_PREFER_PTHREAD TRUE)
 set(THREADS_PREFER_PTHREAD_FLAG TRUE)
 find_package(Threads REQUIRED)
 
-option(WITH_GTEST "Whether to build Google test" OFF)
+option(WITH_GTEST "Whether to build Google test" ON)
 
 set(EXEC_NAME ${CMAKE_PROJECT_NAME})
 set(LIB_NAME "${CMAKE_PROJECT_NAME}_lib")
@@ -76,13 +76,20 @@ function(invalid_arg_test arg)
   set_tests_properties(InvalidArg_${arg}
     PROPERTIES PASS_REGULAR_EXPRESSION "Usage:"
     )
-  set_tests_properties(InvalidArg_${arg}
-    PROPERTIES WILL_FAIL TRUE
-    )
+#   set_tests_properties(InvalidArg_${arg}
+#     PROPERTIES WILL_FAIL TRUE
+#     )
 endfunction()
 
 if(WITH_GTEST)
     enable_testing()
     include(GoogleTest)
     gtest_discover_tests(${TEST_NAME})
+
+    add_test(NAME InvalidArg_empty COMMAND parallel-cp)
+    set_tests_properties(InvalidArg_empty
+      PROPERTIES PASS_REGULAR_EXPRESSION "Usage:"
+    )
+
+    invalid_arg_test("/dir")
 endif()

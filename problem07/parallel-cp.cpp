@@ -1,6 +1,9 @@
 #include "parallel-cp.h"
 
 #include <thread>
+#include <future>
+#include <iostream>
+#include <vector>
 
 namespace fs = std::filesystem;
 
@@ -9,30 +12,55 @@ fs::path lastComponent(const std::filesystem::path& p)
     return fs::relative(p, p.parent_path());
 }
 
-void copyFileWrapper(const std::filesystem::path source, const std::filesystem::path dest)
+bool copyFile(const std::filesystem::path source, const std::filesystem::path dest)
 {
-    fs::copy_file(source, dest);
+    try
+    {
+        fs::copy_file(source, dest);
+        return true;
+    }
+    catch (const fs::filesystem_error& e)
+    {
+        std::cerr << e.what() << std::endl;
+        return false;
+    }
 }
 
-void parallelCopy(const std::filesystem::path source, const std::filesystem::path dest)
+bool parallelCopy(const std::filesystem::path source, const std::filesystem::path dest)
 {
-    auto newPath = dest / lastComponent(source);
-    fs::create_directory(newPath);
-    std::vector<std::jthread> threads;
-    for (auto const& dir_entry : std::filesystem::directory_iterator(source))
+    bool res = true;
+    std::vector<std::future<bool>> tasks;
+    try
     {
-        if (dir_entry.is_regular_file())
+        auto copyPath = !fs::exists(dest) ? dest : dest / lastComponent(source);
+        // if (fs::exists(source))
+        // {
+        //     fs::create_directory(copyPath);
+        // }
+        fs::create_directory(copyPath, source);
+
+        for (auto const& dir_entry : std::filesystem::directory_iterator(source))
         {
-            std::jthread file_task(copyFileWrapper, dir_entry.path(), newPath / dir_entry.path().filename());
-            threads.push_back(std::move(file_task));
-        }
-        else if (dir_entry.is_directory())
-        {
-            std::jthread dir_task(parallelCopy, dir_entry.path(), newPath);
-            threads.push_back(std::move(dir_task));
+            if (dir_entry.is_regular_file())
+            {
+                std::future<bool> file_task = std::async(std::launch::async, copyFile, dir_entry.path(), copyPath / dir_entry.path().filename());
+                tasks.push_back(std::move(file_task));
+            }
+            else if (dir_entry.is_directory())
+            {
+                std::future<bool> dir_task = std::async(std::launch::async, parallelCopy, dir_entry.path(), copyPath);
+                tasks.push_back(std::move(dir_task));
+            }
         }
     }
+    catch (const fs::filesystem_error& e)
+    {
+        std::cerr << e.what() << std::endl;
+        return false;
+    }
 
-    for (auto& t : threads)
-        t.join();
+    for (auto& t : tasks)
+        res &= t.get();
+
+    return res;
 }
