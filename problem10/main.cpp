@@ -1,6 +1,7 @@
 #include <iostream>
 #include <mutex>
 #include <vector>
+#include <thread>
 
 #include "philosopher.h"
 
