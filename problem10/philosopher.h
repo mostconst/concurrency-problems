@@ -2,7 +2,6 @@
 
 #include <mutex>
 #include <map>
-#include "synchronized.h"
 
 using Timepoint = std::chrono::time_point<std::chrono::steady_clock>;
 
