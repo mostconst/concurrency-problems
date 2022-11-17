@@ -1,0 +1,20 @@
+name: 'C++ CI'
+
+on:
+  push:
+    branches:
+      - problem*
+      - feature/github_actions
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Extract branch name
+        run: echo "BRANCH=${GITHUB_REF#refs/heads/}" >> $GITHUB_ENV
+      - uses: actions/checkout@v2
+        with:
+          submodules: true
+      - run: cmake -S ${{env.BRANCH}} -DWITH_GTEST=ON
+      - run: cmake --build .
+      - run: cmake --build . --target test
