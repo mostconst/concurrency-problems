@@ -43,7 +43,7 @@ MyTSlist::~MyTSlist()
 
 void MyTSlist::PushFront(const std::string& s)
 {
-    Node* newNode = new Node{ s, nullptr };
+    Node* newNode = new Node{ s, nullptr, {} };
     std::unique_lock lock(endNode->rwLock);
     InsertAfter(endNode, newNode);
 }
