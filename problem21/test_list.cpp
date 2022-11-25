@@ -11,7 +11,7 @@ std::vector<std::string> toVector(const MyTSlist& l, int max = -1)
     for (auto iter = l.begin(); iter != l.end(); ++iter)
     {
         res.push_back(*iter);
-        if (res.size() == max)
+        if ((int)res.size() == max)
         {
             break;
         }
