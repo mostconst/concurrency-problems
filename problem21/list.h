@@ -44,7 +44,7 @@ private:
     void InsertAfter(Node* pos, Node* newNode);
 
     Node* const endNode = []() {
-        auto n = new Node{ "", nullptr };
+        auto n = new Node{ "", nullptr, {} };
         n->next = n;
         return n;
     }();
