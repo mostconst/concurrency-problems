@@ -1,6 +1,7 @@
 #include "list.h"
 
 #include <cassert>
+#include <mutex>
 
 class NodeWriteAccess
 {
