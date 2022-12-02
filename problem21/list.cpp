@@ -25,17 +25,15 @@ MyTSlist::MyTSlist()
 
 MyTSlist::~MyTSlist()
 {
+    std::unique_lock endLock(endNode->rwLock);
+    while (endNode->next != endNode)
     {
-        std::unique_lock endLock(endNode->rwLock);
-        while (endNode->next != endNode)
+        auto detachedNode = endNode->next;
         {
-            auto detachedNode = endNode->next;
-            {
-                std::shared_lock l(detachedNode->rwLock);
-                endNode->next = detachedNode->next;
-            }
-            delete detachedNode;
+            std::shared_lock l(detachedNode->rwLock);
+            endNode->next = detachedNode->next;
         }
+        delete detachedNode;
     }
 
     delete endNode;
@@ -118,17 +116,6 @@ int MyTSlist::SortAlgo(bool onestep)
     return totalExchanges;
 }
 
-MyTSlist::Iterator MyTSlist::begin() const
-{
-    std::shared_lock lock(endNode->rwLock);
-    return Iterator(endNode->next);
-}
-
-MyTSlist::Iterator MyTSlist::end() const
-{
-    return Iterator{ endNode };
-}
-
 void MyTSlist::InsertAfter(Node* pos, Node* newNode)
 {
     newNode->next = pos->next;
@@ -137,43 +124,50 @@ void MyTSlist::InsertAfter(Node* pos, Node* newNode)
 
 std::ostream& operator<<(std::ostream& os, const MyTSlist& l)
 {
-    for (auto iter = l.begin(); iter != l.end(); ++iter)
+    auto listIter = l.GetIterator();
+    bool printedOne = false;
+    while (listIter.hasNext())
     {
-        if (iter != l.begin())
+        if (printedOne)
         {
             os << " -> ";
         }
-        os << *iter;
+        os << listIter.Next();
+        printedOne = true;
     }
 
     return os;
 }
 
-
-//-----------------------------------------------------------------------------
-// 
-// ---
-MyTSlist::Iterator::Iterator(Node* _node)
-    : node(_node)
+MyTSlist::NewIterator MyTSlist::GetIterator() const
 {
-
+    return NewIterator(endNode);
 }
 
-const std::string& MyTSlist::Iterator::operator*() const
+MyTSlist::NewIterator::NewIterator(Node* sentinel)
+    : sentinel(sentinel)
 {
-    return node->data;
+    curr = sentinel;
+    currLock = std::shared_lock(curr->rwLock);
+    if (curr->next != sentinel)
+    {
+        next = curr->next;
+        nextLock = std::shared_lock(next->rwLock);
+    }
 }
 
-
-MyTSlist::Iterator& MyTSlist::Iterator::operator++()
+const std::string& MyTSlist::NewIterator::Next()
 {
-    std::shared_lock lock(node->rwLock);
-    node = node->next;
-    return *this;
+    assert(hasNext());
+    std::swap(curr, next);
+    std::swap(currLock, nextLock);
+    next = curr->next;
+    nextLock = std::shared_lock(next->rwLock);
+
+    return curr->data;
 }
 
-
-bool MyTSlist::Iterator::operator!=(const Iterator& other) const
+bool MyTSlist::NewIterator::hasNext() const
 {
-    return node != other.node;
+    return next && next != sentinel;
 }

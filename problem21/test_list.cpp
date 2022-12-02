@@ -8,9 +8,10 @@
 std::vector<std::string> toVector(const MyTSlist& l, int max = -1)
 {
     std::vector<std::string> res;
-    for (auto iter = l.begin(); iter != l.end(); ++iter)
+    auto listIter = l.GetIterator();
+    while(listIter.hasNext())
     {
-        res.push_back(*iter);
+        res.push_back(listIter.Next());
         if ((int)res.size() == max)
         {
             break;

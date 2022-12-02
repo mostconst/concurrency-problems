@@ -22,22 +22,24 @@ public:
     MyTSlist& operator=(const MyTSlist& other) = delete;
     MyTSlist& operator=(MyTSlist&& other) = delete;
 
-    class Iterator
+    class NewIterator
     {
     public:
-        Iterator(Node* _node);
-        const std::string& operator*() const;
-        Iterator& operator++();
-        bool operator!=(const Iterator& other) const;
+        NewIterator(Node* sentinel);
+        const std::string& Next();
+        bool hasNext() const;
     private:
-        Node* node;
+        const Node* const sentinel;
+        Node* curr = nullptr;
+        std::shared_lock<std::shared_mutex> currLock;
+        Node* next = nullptr;
+        std::shared_lock<std::shared_mutex> nextLock;
     };
 
     void PushFront(const std::string& s);
     void Sort();
     int SortStep();
-    Iterator begin() const;
-    Iterator end() const;
+    [[nodiscard]] NewIterator GetIterator() const;
 
 private:
     int SortAlgo(bool onestep);
