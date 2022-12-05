@@ -4,21 +4,33 @@
 
 #include <future>
 
+using namespace std::chrono_literals;
 
-std::vector<std::string> toVector(const MyTSlist& l, int max = -1)
+std::vector<std::string> toVectorGeneral(const MyTSlist& l, int max, std::chrono::milliseconds pause)
 {
     std::vector<std::string> res;
     auto listIter = l.GetIterator();
-    while(listIter.hasNext())
+    while (listIter.hasNext())
     {
         res.push_back(listIter.Next());
         if ((int)res.size() == max)
         {
             break;
         }
+        std::this_thread::sleep_for(pause);
     }
 
     return res;
+}
+
+std::vector<std::string> toVector(const MyTSlist& l, int max = -1)
+{
+    return toVectorGeneral(l, max, 0ms);
+}
+
+std::vector<std::string> toVectorWithPauses(const MyTSlist& l, std::chrono::milliseconds pause)
+{
+    return toVectorGeneral(l, -1, pause);
 }
 
 TEST(TestList, PrintEmpty)
@@ -244,4 +256,38 @@ TEST(TestList, ReadingWhileInserting)
             }
         }
     }
+}
+
+TEST(TestList, ClearEmpty)
+{
+    MyTSlist l;
+    l.Clear();
+    ASSERT_EQ(toVector(l), std::vector<std::string>{});
+}
+
+TEST(TestList, ClearNonempty)
+{
+    MyTSlist l;
+    l.PushFront("1");
+    l.PushFront("2");
+    l.Clear();
+    ASSERT_EQ(toVector(l), std::vector<std::string>{});
+}
+
+TEST(TestList, ConcurrentIterateAndClear)
+{
+    MyTSlist l;
+    int nElem = 100;
+    for(int i = 0; i < nElem; ++i)
+    {
+        l.PushFront(std::to_string(i));
+    }
+
+    auto reader = std::async(std::launch::async, toVectorWithPauses, std::ref(l), 10ms);
+    std::this_thread::sleep_for(100ms);
+    auto cleaner = std::async(std::launch::async, [&l] {l.Clear(); });
+    auto listContent = reader.get();
+    cleaner.get();
+    ASSERT_EQ(toVector(l), std::vector<std::string>{});
+    ASSERT_EQ(listContent, GetConseq(nElem - 1, nElem));
 }

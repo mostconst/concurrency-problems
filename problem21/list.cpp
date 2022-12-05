@@ -1,4 +1,4 @@
-#include "list.h"
+﻿#include "list.h"
 
 #include <cassert>
 #include <mutex>
@@ -26,17 +26,7 @@ MyTSlist::MyTSlist()
 
 MyTSlist::~MyTSlist()
 {
-    std::unique_lock endLock(endNode->rwLock);
-    while (endNode->next != endNode)
-    {
-        auto detachedNode = endNode->next;
-        {
-            std::shared_lock l(detachedNode->rwLock);
-            endNode->next = detachedNode->next;
-        }
-        delete detachedNode;
-    }
-
+    Clear();
     delete endNode;
 }
 
@@ -145,6 +135,20 @@ MyTSlist::NewIterator MyTSlist::GetIterator() const
     return NewIterator(endNode);
 }
 
+void MyTSlist::Clear()
+{
+    std::unique_lock endLock(endNode->rwLock);
+    while (endNode->next != endNode)
+    {
+        auto detachedNode = endNode->next;
+        {
+            std::unique_lock l(detachedNode->rwLock);
+            endNode->next = detachedNode->next;
+        }
+        delete detachedNode;
+    }
+}
+
 MyTSlist::NewIterator::NewIterator(Node* sentinel)
     : sentinel(sentinel)
 {
@@ -163,7 +167,11 @@ const std::string& MyTSlist::NewIterator::Next()
     std::swap(curr, next);
     std::swap(currLock, nextLock);
     next = curr->next;
-    nextLock = std::shared_lock(next->rwLock);
+    // sentinel может выступать в роли как начального, так и конечного элемента,
+    // так как список циклический. Чтобы избежать дедлоков, его мьютекс захватываем
+    // только когда он выступает в роли начального, а тут ситуация обратная.
+    nextLock = (next != sentinel) ? std::shared_lock(next->rwLock) :
+                                    std::shared_lock<std::shared_mutex>();
 
     return curr->data;
 }

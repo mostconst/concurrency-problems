@@ -40,6 +40,7 @@ public:
     void Sort();
     int SortStep();
     [[nodiscard]] NewIterator GetIterator() const;
+    void Clear();
 
 private:
     int SortAlgo(bool onestep);
