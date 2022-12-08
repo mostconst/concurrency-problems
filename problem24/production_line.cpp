@@ -13,7 +13,7 @@ void ProductionLine::ProductionProcess()
         semaphoreStart.acquire();
         for (auto& line : supplyLines)
         {
-            line->Consume(makeAnother);
+            line.get().Consume(makeAnother);
         }
 
         if (makeAnother)

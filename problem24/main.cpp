@@ -10,8 +10,8 @@ int main()
     ProductionLine lineForA(1000, "A", {});
     ProductionLine lineForB(2000, "B", {});
     ProductionLine lineForC(3000, "C", {});
-    ProductionLine lineForModule(100, "Module", { &lineForA, &lineForB });
-    ProductionLine lineForWidget(100, "Widget", {&lineForModule, &lineForC});
+    ProductionLine lineForModule(100, "Module", { lineForA, lineForB });
+    ProductionLine lineForWidget(100, "Widget", {lineForModule, lineForC});
 
     std::vector<std::thread> lineThreads;
     lineThreads.emplace_back(&ProductionLine::ProductionProcess, std::ref(lineForA));

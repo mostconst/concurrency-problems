@@ -1,16 +1,18 @@
 #pragma once
 #include <semaphore>
+#include <vector>
+#include <functional>
 
 class ProductionLine
 {
 public:
     ProductionLine(int time_to_make, std::string part_name,
-                   std::vector<ProductionLine*> other_lines)
+                   std::vector<std::reference_wrapper<ProductionLine>> supply_lines)
         : timeToMake(time_to_make),
           partName(std::move(part_name)),
           semaphoreStart(1),
           semaphoreDone(0),
-          supplyLines(std::move(other_lines))
+          supplyLines(std::move(supply_lines))
     {
     }
 
@@ -23,7 +25,7 @@ public:
     std::binary_semaphore semaphoreStart;
     std::binary_semaphore semaphoreDone;
     bool makeAnother = true;
-    const std::vector<ProductionLine*> supplyLines;
+    const std::vector<std::reference_wrapper<ProductionLine>> supplyLines;
 };
 
 void productionLineDriver(ProductionLine& l);
