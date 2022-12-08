@@ -7,11 +7,12 @@
 
 int main()
 {
-    ProductionLine lineForA(1000, "A", {});
-    ProductionLine lineForB(2000, "B", {});
-    ProductionLine lineForC(3000, "C", {});
-    ProductionLine lineForModule(100, "Module", { lineForA, lineForB });
-    ProductionLine lineForWidget(100, "Widget", {lineForModule, lineForC});
+    ProductionLogger logger;
+    ProductionLine lineForA(1000, "A", {}, logger);
+    ProductionLine lineForB(2000, "B", {}, logger);
+    ProductionLine lineForC(3000, "C", {}, logger);
+    ProductionLine lineForModule(100, "Module", { lineForA, lineForB }, logger);
+    ProductionLine lineForWidget(100, "Widget", {lineForModule, lineForC}, logger);
 
     std::vector<std::thread> lineThreads;
     lineThreads.emplace_back(&ProductionLine::ProductionProcess, std::ref(lineForA));
@@ -23,7 +24,7 @@ int main()
     constexpr int nWidgets = 3;
     for(int i = 0; i != nWidgets; ++i)
     {
-        lineForWidget.Consume(i != nWidgets - 1);
+        lineForWidget.Consume(i != nWidgets - 1, "Consumer of widgets");
     }
 
     for(auto& thread: lineThreads)
