@@ -8,26 +8,28 @@
 int main()
 {
     ProductionLogger logger;
-    ProductionLine lineForA(1000, "A", {}, logger);
-    ProductionLine lineForB(2000, "B", {}, logger);
-    ProductionLine lineForC(3000, "C", {}, logger);
-    ProductionLine lineForModule(100, "Module", { lineForA, lineForB }, logger);
-    ProductionLine lineForWidget(100, "Widget", {lineForModule, lineForC}, logger);
 
-    std::vector<std::thread> lineThreads;
-    lineThreads.emplace_back(&ProductionLine::ProductionProcess, std::ref(lineForA));
-    lineThreads.emplace_back(&ProductionLine::ProductionProcess, std::ref(lineForB));
-    lineThreads.emplace_back(&ProductionLine::ProductionProcess, std::ref(lineForC));
-    lineThreads.emplace_back(&ProductionLine::ProductionProcess, std::ref(lineForModule));
-    lineThreads.emplace_back(&ProductionLine::ProductionProcess, std::ref(lineForWidget));
+    PartStorage finishedAs("A");
+    PartStorage finishedBs("B");
+    PartStorage finishedCs("C");
+    PartStorage finishedModules("Module");
+    PartStorage storageForWidget("Widget");
 
-    constexpr int nWidgets = 3;
-    for(int i = 0; i != nWidgets; ++i)
-    {
-        lineForWidget.Consume(i != nWidgets - 1, "Consumer of widgets");
-    }
+    ProductionStage stageForA(1000, "A stage", finishedAs, {}, logger);
+    ProductionStage stageForB(2000, "B stage", finishedBs, {}, logger);
+    ProductionStage stageForC(3000, "C stage", finishedCs, {}, logger);
+    ProductionStage stageForModule(100, "Module stage", finishedModules, { finishedAs, finishedBs }, logger);
+    ProductionStage stageForWidget(100, "Widget stage", storageForWidget, {finishedModules, finishedCs}, logger);
 
-    for(auto& thread: lineThreads)
+    constexpr int productionPlan = 3;
+    std::vector<std::thread> workers;
+    workers.emplace_back(workerRoutine, std::ref(stageForA), std::ref(logger), productionPlan);
+    workers.emplace_back(workerRoutine, std::ref(stageForB), std::ref(logger), productionPlan);
+    workers.emplace_back(workerRoutine, std::ref(stageForC), std::ref(logger), productionPlan);
+    workers.emplace_back(workerRoutine, std::ref(stageForModule), std::ref(logger), productionPlan);
+    workers.emplace_back(workerRoutine, std::ref(stageForWidget), std::ref(logger), productionPlan);
+
+    for(auto& thread: workers)
     {
         thread.join();
     }

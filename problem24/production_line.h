@@ -14,22 +14,54 @@ private:
     const std::chrono::steady_clock::time_point start;
 };
 
-class ProductionLine
+class PartStorage final
 {
 public:
-    ProductionLine(int time_to_make, std::string part_name,
-        std::vector<std::reference_wrapper<ProductionLine>> supply_lines, const ProductionLogger& logger);
+    explicit PartStorage(std::string part_name)
+        : partName(std::move(part_name))
+    {
+    }
 
-    void ProductionProcess();
-    void Consume(bool another, const std::string& consumer);
+    [[nodiscard]] std::string GetPartName() const
+    {
+        return partName;
+    }
 
-public:
-    const int timeToMake;
+    void Put()
+    {
+        parts.release();
+    }
+
+    void Consume()
+    {
+        parts.acquire();
+    }
+private:
     const std::string partName;
-    const std::string lineName;
-    std::binary_semaphore semaphoreStart;
-    std::binary_semaphore semaphoreDone;
-    bool makeAnother = true;
-    const std::vector<std::reference_wrapper<ProductionLine>> supplyLines;
+
+private:
+    std::counting_semaphore<> parts{0};
+};
+
+class ProductionStage final
+{
+public:
+    ProductionStage(int time_to_make, std::string stage_name, PartStorage& finished_parts,
+        std::vector<std::reference_wrapper<PartStorage>> supplies, const ProductionLogger& logger);
+
+    void Make() const;
+public:
+    [[nodiscard]] const std::string& GetStageName() const
+    {
+        return stageName;
+    }
+
+private:
+    const int timeToMake;
+    const std::string stageName;
+    PartStorage& finishedParts;
+    const std::vector<std::reference_wrapper<PartStorage>> supplies;
     const ProductionLogger& logger;
 };
+
+void workerRoutine(ProductionStage& stage, const ProductionLogger& logger, int plan);

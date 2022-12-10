@@ -12,49 +12,35 @@ void ProductionLogger::Log(const std::string& message) const
     std::osyncstream(std::cout) << std::chrono::duration_cast<std::chrono::milliseconds>(dur).count() << " ms: " << message << std::endl;
 }
 
-ProductionLine::ProductionLine(int time_to_make, std::string part_name,
-    std::vector<std::reference_wrapper<ProductionLine>> supply_lines, const ProductionLogger& logger)
-    :  timeToMake(time_to_make),
-       partName(std::move(part_name)),
-       lineName(partName + " maker"),
-       semaphoreStart(1),
-       semaphoreDone(0),
-       supplyLines(std::move(supply_lines)),
-       logger(logger)
+ProductionStage::ProductionStage(int time_to_make, std::string stage_name, PartStorage& finished_parts,
+    std::vector<std::reference_wrapper<PartStorage>> supplies, const ProductionLogger& logger)
+    : timeToMake(time_to_make),
+      stageName(std::move(stage_name)),
+      finishedParts(finished_parts),
+      supplies(std::move(supplies)),
+      logger(logger)
 {
 }
 
-void ProductionLine::ProductionProcess()
+void ProductionStage::Make() const
 {
-    logger.Log(lineName + " started");
-    while (true)
+    for (auto& supply : supplies)
     {
-        semaphoreStart.acquire();
-        for (auto& line : supplyLines)
-        {
-            line.get().Consume(makeAnother, lineName);
-        }
-
-        if (makeAnother)
-        {
-            std::this_thread::sleep_for(std::chrono::milliseconds(timeToMake));
-            logger.Log(lineName + " made " + partName);
-        }
-        else
-        {
-            logger.Log(lineName + " stopped");
-            semaphoreDone.release();
-            break;
-        }
-
-        semaphoreDone.release();
+        supply.get().Consume();
+        logger.Log(stageName + " consumed " + supply.get().GetPartName());
     }
+
+    std::this_thread::sleep_for(std::chrono::milliseconds(timeToMake));
+    finishedParts.Put();
+    logger.Log(stageName + " made " + finishedParts.GetPartName());
 }
 
-void ProductionLine::Consume(const bool another, const std::string& consumer)
+void workerRoutine(ProductionStage& stage, const ProductionLogger& logger, const int plan)
 {
-    semaphoreDone.acquire();
-    logger.Log(consumer + " consumed " + partName);
-    makeAnother = another;
-    semaphoreStart.release();
+    logger.Log("worker started on " + stage.GetStageName());
+    for(int i = 0; i != plan; ++i)
+    {
+        stage.Make();
+    }
+    logger.Log("worker stopped on " + stage.GetStageName());
 }
